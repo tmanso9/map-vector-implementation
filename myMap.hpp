@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <memory>
 
-template <typename Key, typename T, typename Allocator = std::allocator<std::pair<Key, T>>, typename Compare = std::less<Key>>
+template <typename Key, typename T, typename Compare = std::less<Key>, typename Allocator = std::allocator<std::pair<Key, T>>>
 class myMap {
 private:
 	using key_type = Key;
@@ -21,9 +21,9 @@ private:
 	using pointer = typename Allocator::pointer;
 	using const_pointer = typename Allocator::const_pointer;
 
-	std::vector<value_type> vec;
-	Allocator allocator;
 	key_compare compare;
+	Allocator allocator;
+	std::vector<value_type, Allocator> vec;
 
 public:
 	using iterator = typename std::vector<value_type>::iterator;
@@ -56,34 +56,47 @@ public:
 	// ===============
 	// Constructors
 	// ===============
-	myMap() {};
-	myMap(std::initializer_list<value_type> pairs, const Allocator& alloc = Allocator(), const Compare& comp = Compare())
+	myMap() : myMap(Compare()) {}
+	myMap(std::initializer_list<value_type> pairs, const Compare& comp = Compare(), const Allocator& alloc = Allocator())
 		:
-		allocator(alloc),
-		compare(comp) {
+		compare(comp),
+		allocator(alloc) {
 		vec.reserve(pairs.size());
 		for (const value_type& pair : pairs) {
-			vec.push_back(pair);
+			vec.emplace_back(pair);
 		}
 		std::sort(vec.begin(), vec.end(), value_comp());
 	};
 	myMap(const myMap& other) { *this = other; }
 
-	//TO-DO 
-	// myMap() : myMap(Compare()) {}
+	explicit myMap(const Compare& comp, const Allocator& alloc = Allocator()) : compare(comp), allocator(alloc) {}
 
-	// explicit myMap(const Compare& comp, const Allocator& alloc = Allocator());
+	explicit myMap(const Allocator& alloc) : allocator(alloc) {}
 
-	// explicit myMap( const Allocator& alloc );
+	template< class InputIt >
+	myMap(InputIt first, InputIt last, const Compare& comp = Compare(), const Allocator& alloc = Allocator())
+		:
+		compare(comp),
+		allocator(alloc) {
+		vec.reserve(last - first);
+		while (first != last) {
+			vec.emplace_back(first->first, first->second);
+			first++;
+		}
+		std::sort(vec.begin(), vec.end(), value_comp());
+	}
 
-	// template< class InputIt >
-	// myMap(InputIt first, InputIt last, const Compare& comp = Compare(), const Allocator& alloc = Allocator());
+	myMap(const myMap& other, const Allocator& alloc) : allocator(alloc) { *this = other; }
 
-	// myMap(const myMap& other, const Allocator& alloc);
+	myMap(myMap&& other)
+		: compare(std::move(other.compare)),
+		allocator(std::move(other.allocator)),
+		vec(std::move(other.vec)) {}
 
-	// myMap(myMap&& other);
-
-	// myMap(myMap&& other, const Allocator& alloc);
+	myMap(myMap&& other, const Allocator& alloc)
+		: compare(std::move(other.compare)),
+		allocator(alloc),
+		vec(std::move(other.vec)) {}
 
 	// ===============
 	// Operator=
@@ -92,8 +105,8 @@ public:
 		if (this == &other) return *this;
 		vec.clear();
 		vec.reserve(other.size());
-		for (const value_type pair : other.vec) {
-			vec.push_back(pair);
+		for (const value_type& pair : other.vec) {
+			vec.emplace_back(pair);
 		}
 		return *this;
 	}
