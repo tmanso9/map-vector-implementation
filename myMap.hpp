@@ -139,7 +139,14 @@ public:
 		it = insert({ key, T() }).first;
 		return it->second;
 	}
-	// TO-DO: T& operator[]( Key&& key );
+	T& operator[]( Key&& key ){
+		iterator it = lower_bound(key);
+		if (it != end() && it->first == key) {
+			return it->second;
+		}
+		it = insert({ std::move(key), T() }).first;
+		return it->second;
+	}
 
 	// ===============
 	// at
