@@ -180,7 +180,6 @@ public:
 	// ===============
 	iterator begin() { return iterator(vec.begin()); }
 	const_iterator begin() const { return const_iterator(vec.begin()); }
-	iterator cbegin() { return iterator(vec.cbegin()); }
 	const_iterator cbegin() const { return const_iterator(vec.cbegin()); }
 
 	// ===============
@@ -188,24 +187,21 @@ public:
 	// ===============
 	iterator end() { return iterator(vec.end()); }
 	const_iterator end() const { return const_iterator(vec.end()); }
-	iterator cend() { return iterator(vec.cend()); }
 	const_iterator cend() const { return const_iterator(vec.cend()); }
 
 	// ===============
 	// rbegin / crbegin
 	// ===============
-	iterator rbegin() { return iterator(vec.rbegin()); }
-	const_iterator rbegin() const { return const_iterator(vec.rbegin()); }
-	iterator crbegin() { return iterator(vec.crbegin()); }
-	const_iterator crbegin() const { return const_iterator(vec.crbegin()); }
+	reverse_iterator rbegin() { return iterator(vec.rbegin()); }
+	const_reverse_iterator rbegin() const { return const_iterator(vec.rbegin()); }
+	const_reverse_iterator crbegin() const { return const_reverse_iterator(vec.crbegin()); }
 
 	// ===============
 	// rend / crend
 	// ===============
-	iterator rend() { return iterator(vec.rend()); }
-	const_iterator rend() const { return const_iterator(vec.rend()); }
-	iterator crend() { return iterator(vec.crend()); }
-	const_iterator crend() const { return const_iterator(vec.crend()); }
+	reverse_iterator rend() { return iterator(vec.rend()); }
+	const_reverse_iterator rend() const { return const_iterator(vec.rend()); }
+	const_reverse_iterator crend() const { return const_reverse_iterator(vec.crend()); }
 
 
 	// ======================================================================================== //
@@ -254,24 +250,53 @@ public:
 		if (it != end() && it->first == value.first) {
 			return std::make_pair(it, false);
 		}
-		it = emplace(value.first, value.second).first;
+		it = vec.insert(it, value);
 		return std::make_pair(it, true);
 	}
+	template< class P >
+	std::pair<iterator, bool> insert(P&& value){
+		iterator it = lower_bound(value.first);
+		if (it != end() && it->first == value.first) {
+			return std::make_pair(it, false);
+		}
+		it = vec.insert(it, value);
+		return std::make_pair(it, true);
+	}
+
+	iterator insert( const_iterator pos, const value_type& value ){
+		iterator it = vec.begin() + std::distance(vec.cbegin(), pos);
+		if (pos != cend() && pos->first == value.first) {
+			return it;
+		}
+		it = vec.insert(it, value);
+		return it;
+	}
+
+	template< class P >
+	iterator insert( const_iterator pos, P&& value ){
+		iterator it = vec.begin() + std::distance(vec.cbegin(), pos);
+		if (pos != cend() && pos->first == value.first) {
+			return it;
+		}
+		it = vec.insert(it, value);
+		return it;
+	}
+
+	template< class InputIt >
+	void insert(InputIt first, InputIt last){
+		while (first != last){
+			insert(std::make_pair(first->first, first->second));
+			first++;
+		}
+	}
+
+	void insert( std::initializer_list<value_type> ilist ){
+		for (const value_type& pair: ilist){
+			insert(pair);
+		}
+	}
 	//TO-DO
-	// template< class P >
-	// std::pair<iterator, bool> insert(P&& value);
-
-	// iterator insert( iterator pos, const value_type& value );
-
-	// iterator insert( const_iterator pos, const value_type& value );
-
-	// template< class P >
-	// iterator insert( const_iterator pos, P&& value );
-
-	// template< class InputIt >
-	// void insert(InputIt first, InputIt last);
-
-	// void insert( std::initializer_list<value_type> ilist );
+	// fix insert and emplace so they don't change the pointers
 
 	// ===============
 	// emplace
@@ -279,14 +304,12 @@ public:
 	template < class ...Args>
 	std::pair<iterator, bool> emplace(Args &&... args) {
 		value_type keyVal(std::forward<Args>(args)...);
-		iterator it = find(keyVal.first);
-		if (it != end()) {
-			return std::make_pair(it, false);
+		iterator vecIt = find(keyVal.first);
+		if (vecIt != vec.end() && vecIt->first == keyVal.first){
+			return std::make_pair(vecIt, false);
 		}
-		iterator vecIt = std::lower_bound(vec.begin(), vec.end(), keyVal.first,
-			[this](const value_type& pair, const Key& key) { return key_comp()(pair.first, key);});
-		vec.insert(vecIt, keyVal);
-		return std::make_pair(find(keyVal.first), true);
+		vecIt = insert(keyVal).first;
+		return std::make_pair(vecIt, true);
 	}
 
 	// ===============
