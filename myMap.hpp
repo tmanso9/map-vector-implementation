@@ -295,8 +295,6 @@ public:
 			insert(pair);
 		}
 	}
-	//TO-DO
-	// fix insert and emplace so they don't change the pointers
 
 	// ===============
 	// emplace
