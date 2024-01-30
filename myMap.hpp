@@ -20,21 +20,29 @@ private:
 	using const_reference = const value_type&;
 	using pointer = typename Allocator::pointer;
 	using const_pointer = typename Allocator::const_pointer;
+
+	std::vector<value_type> vec;
+	Allocator allocator;
+	key_compare compare;
+
+public:
 	using iterator = typename std::vector<value_type>::iterator;
 	using const_iterator = typename std::vector<value_type>::const_iterator;
 	using reverse_iterator = typename std::vector<value_type>::reverse_iterator;
 	using const_reverse_iterator = typename std::vector<value_type>::const_reverse_iterator;
-
-	std::vector<value_type> vec;
-	Allocator allocator;
-	Compare compare;
-
-public:
 	// ======================================================================================== //
 	// Member classes																			//
 	// 	- 	value_compare 																		//
 	// ======================================================================================== //
-	//TO-DO class value_compare{};
+	class value_compare {
+	protected:
+		key_compare comp;
+	public:
+		bool operator()(const value_type& lhs, const value_type& rhs) const {
+			return comp(lhs.first, rhs.first);
+		}
+		value_compare(key_compare c) : comp(c) {}
+	};
 
 
 	// ======================================================================================== //
@@ -49,15 +57,15 @@ public:
 	// Constructors
 	// ===============
 	myMap() {};
-	myMap(std::initializer_list<value_type> pairs, const Compare& comp = Compare(), const Allocator& alloc = Allocator()) {
-		allocator = alloc;
-		compare = comp;
+	myMap(std::initializer_list<value_type> pairs, const Allocator& alloc = Allocator(), const Compare& comp = Compare())
+		:
+		allocator(alloc),
+		compare(comp) {
 		vec.reserve(pairs.size());
 		for (const value_type& pair : pairs) {
 			vec.push_back(pair);
 		}
-		std::sort(vec.begin(), vec.end(),
-			[](const value_type& pair1, const value_type& pair2) { return pair1.first < pair2.first;});
+		std::sort(vec.begin(), vec.end(), value_comp());
 	};
 	myMap(const myMap& other) { *this = other; }
 
@@ -256,7 +264,7 @@ public:
 			return std::make_pair(it, false);
 		}
 		iterator vecIt = std::lower_bound(vec.begin(), vec.end(), keyVal.first,
-			[](const value_type& pair, const Key& key) { return pair.first < key;});
+			[this](const value_type& pair, const Key& key) { return key_comp()(pair.first, key);});
 		vec.insert(vecIt, keyVal);
 		return std::make_pair(find(keyVal.first), true);
 	}
@@ -407,9 +415,20 @@ public:
 	// 	- 	key_comp	 																		//
 	// 	- 	value_comp	 																		//
 	// ======================================================================================== //
-	// TO-DO
-	// key_compare key_comp() const;
-	// myMap::value_compare value_comp() const;
+
+	// ===============
+	// key_comp
+	// ===============
+	key_compare key_comp() const {
+		return key_compare();
+	}
+
+	// ===============
+	// value_comp
+	// ===============
+	myMap::value_compare value_comp() const {
+		return value_compare(compare);
+	}
 
 
 	// ======================================================================================== //
