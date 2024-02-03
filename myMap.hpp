@@ -8,7 +8,11 @@
 
 template <typename Key, typename T, typename Compare = std::less<Key>, typename Allocator = std::allocator<std::pair<Key, T>>>
 class myMap {
-private:
+
+public:
+	// ======================================================================================== //
+	// Member types																				//
+	// ======================================================================================== //
 	using key_type = Key;
 	using mapped_type = T;
 	using value_type = std::pair<Key, T>;
@@ -20,16 +24,12 @@ private:
 	using const_reference = const value_type&;
 	using pointer = typename Allocator::pointer;
 	using const_pointer = typename Allocator::const_pointer;
-
-	key_compare compare;
-	Allocator allocator;
-	std::vector<value_type, Allocator> vec;
-
-public:
 	using iterator = typename std::vector<value_type>::iterator;
 	using const_iterator = typename std::vector<value_type>::const_iterator;
 	using reverse_iterator = typename std::vector<value_type>::reverse_iterator;
 	using const_reverse_iterator = typename std::vector<value_type>::const_reverse_iterator;
+
+
 	// ======================================================================================== //
 	// Member classes																			//
 	// 	- 	value_compare 																		//
@@ -60,11 +60,8 @@ public:
 	myMap(std::initializer_list<value_type> pairs, const Compare& comp = Compare(), const Allocator& alloc = Allocator())
 		:
 		compare(comp),
-		allocator(alloc) {
-		vec.reserve(pairs.size());
-		for (const value_type& pair : pairs) {
-			vec.emplace_back(pair);
-		}
+		allocator(alloc),
+		vec(pairs) {
 		std::sort(vec.begin(), vec.end(), value_comp());
 	};
 	myMap(const myMap& other) { *this = other; }
@@ -77,12 +74,8 @@ public:
 	myMap(InputIt first, InputIt last, const Compare& comp = Compare(), const Allocator& alloc = Allocator())
 		:
 		compare(comp),
-		allocator(alloc) {
-		vec.reserve(last - first);
-		while (first != last) {
-			vec.emplace_back(first->first, first->second);
-			first++;
-		}
+		allocator(alloc),
+		vec(first, last) {
 		std::sort(vec.begin(), vec.end(), value_comp());
 	}
 
@@ -139,7 +132,7 @@ public:
 		it = insert({ key, T() }).first;
 		return it->second;
 	}
-	T& operator[]( Key&& key ){
+	T& operator[](Key&& key) {
 		iterator it = lower_bound(key);
 		if (it != end() && it->first == key) {
 			return it->second;
@@ -254,7 +247,7 @@ public:
 		return std::make_pair(it, true);
 	}
 	template< class P >
-	std::pair<iterator, bool> insert(P&& value){
+	std::pair<iterator, bool> insert(P&& value) {
 		iterator it = lower_bound(value.first);
 		if (it != end() && it->first == value.first) {
 			return std::make_pair(it, false);
@@ -263,7 +256,7 @@ public:
 		return std::make_pair(it, true);
 	}
 
-	iterator insert( const_iterator pos, const value_type& value ){
+	iterator insert(const_iterator pos, const value_type& value) {
 		iterator it = vec.begin() + std::distance(vec.cbegin(), pos);
 		if (pos != cend() && pos->first == value.first) {
 			return it;
@@ -273,7 +266,7 @@ public:
 	}
 
 	template< class P >
-	iterator insert( const_iterator pos, P&& value ){
+	iterator insert(const_iterator pos, P&& value) {
 		iterator it = vec.begin() + std::distance(vec.cbegin(), pos);
 		if (pos != cend() && pos->first == value.first) {
 			return it;
@@ -283,15 +276,15 @@ public:
 	}
 
 	template< class InputIt >
-	void insert(InputIt first, InputIt last){
-		while (first != last){
+	void insert(InputIt first, InputIt last) {
+		while (first != last) {
 			insert(std::make_pair(first->first, first->second));
 			first++;
 		}
 	}
 
-	void insert( std::initializer_list<value_type> ilist ){
-		for (const value_type& pair: ilist){
+	void insert(std::initializer_list<value_type> ilist) {
+		for (const value_type& pair : ilist) {
 			insert(pair);
 		}
 	}
@@ -303,7 +296,7 @@ public:
 	std::pair<iterator, bool> emplace(Args &&... args) {
 		value_type keyVal(std::forward<Args>(args)...);
 		iterator vecIt = find(keyVal.first);
-		if (vecIt != vec.end() && vecIt->first == keyVal.first){
+		if (vecIt != vec.end() && vecIt->first == keyVal.first) {
 			return std::make_pair(vecIt, false);
 		}
 		vecIt = insert(keyVal).first;
@@ -523,6 +516,11 @@ public:
 	friend bool operator>=(const myMap<Key, T, Allocator, Compare>& lhs, const myMap<Key, T, Allocator, Compare>& rhs) {
 		return lhs.vec >= rhs.vec;
 	}
+
+private:
+	key_compare compare;
+	Allocator allocator;
+	std::vector<value_type, Allocator> vec;
 };
 
 #endif
